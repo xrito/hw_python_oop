@@ -1,7 +1,6 @@
 import datetime as dt
 
 date_format = '%d.%m.%Y'
-now = dt.datetime.now()
 
 
 class Record:
@@ -13,7 +12,7 @@ class Record:
         if date is not None:
             self.date = dt.datetime.strptime(date, date_format).date()
         else:
-            self.date = dt.datetime.now().date()
+            self.date = dt.date.today()
 
 
 class Calculator:
@@ -21,28 +20,30 @@ class Calculator:
         self.limit = limit
         self.records = []
 
-    def add_record(self, record):  # добавляет новую запись
+    # добавляет новую запись в словарь
+    def add_record(self, record):
         self.records.append(record)
 
-    def sum_add_records(self):  # суммирует записи в списоке records
+    # суммирует записи в списоке records
+    def sum_add_records(self):
         return sum(record.amount for record in self.records)
 
-    def get_today_stats(self):  # потрачено за день(без даты)
-        day_amount = 0
-        now = dt.datetime.now().date()
-        for day in self.records:
-            if day.date == now:
-                day_amount += day.amount
-        return day_amount
+    # потрачено за день(без даты)
 
-    def get_week_stats(self):  # потрачено за неделю (с датой)
-        now = dt.datetime.now().date()
-        week_amount = 0
+    def get_today_stats(self):
+        now = dt.date.today()
+        return sum(record.amount for record in self.records
+                   if record.date == now)
+
+    # потрачено за неделю (с датой)
+    def get_week_stats(self):
+        now = dt.date.today()
         week_back = now - dt.timedelta(days=7)
-        for week in self.records:
-            if week.date >= week_back and week.date <= now:
-                week_amount += week.amount
-        return week_amount
+        return sum(record.amount for record in self.records
+                   if now >= record.date >= week_back)
+
+    def remainder(self):
+        return self.limit - self.get_today_stats()
 
 
 class CashCalculator(Calculator):
@@ -51,44 +52,25 @@ class CashCalculator(Calculator):
 
     # остаток от лимита, в рублях или валюте
     def get_today_cash_remained(self, currency):
-        sum_today = self.get_today_stats()
-        remainder = self.limit - sum_today
-        if currency == 'rub':
-            if remainder > 0:
-                return f'На сегодня осталось {abs(remainder)} руб'
-            elif remainder == 0:
-                return 'Денег нет, держись'
-            else:
-                return f'Денег нет, держись: твой долг - {abs(remainder)} руб'
-        elif currency == 'usd':
-            if remainder > 0:
-                return (f'На сегодня осталось '
-                        f'{round((abs(remainder) / self.USD_RATE), 2)} USD')
-            elif remainder == 0:
-                return 'Денег нет, держись'
-            else:
-                return (f'Денег нет, держись: твой долг - '
-                        f'{round((abs(remainder) / self.USD_RATE), 2)} USD')
-        elif currency == 'eur':
-            if remainder > 0:
-                return (f'На сегодня осталось '
-                        f'{round((abs(remainder) / self.EURO_RATE), 2)} Euro')
-            elif remainder == 0:
-                return 'Денег нет, держись'
-            else:
-                return (f'Денег нет, держись: твой долг - '
-                        f'{round((abs(remainder) / self.EURO_RATE), 2)} Euro')
+        cur_l = {"eur": [self.EURO_RATE, 'Euro'], "usd": [
+            self.USD_RATE, 'USD'], "rub": [1, 'руб']}
+        cur_r = abs(self.remainder() / cur_l[currency][0])
+        if self.remainder() < 0:
+            return (f'Денег нет, держись: '
+                    f'твой долг - {cur_r:.2f} {cur_l[currency][1]}')
+        elif self.remainder() == 0:
+            return 'Денег нет, держись'
         else:
-            return 'Неизвестная валюта'
+            return f'На сегодня осталось {cur_r:.2f} {cur_l[currency][1]}'
 
 
 class CaloriesCalculator(Calculator):
 
-    def get_calories_remained(self):  # съедено за неделю (с датой)
-        sum_amount = self.get_today_stats()
-        result = (self.limit - sum_amount)
-        if self.limit - sum_amount >= 0:
+    # съедено за неделю (с датой)
+    def get_calories_remained(self):
+        if self.remainder() >= 0:
             return (f'Сегодня можно съесть что-нибудь ещё, '
-                    f'но с общей калорийностью не более {result} кКал')
+                    f'но с общей калорийностью не более '
+                    f'{self.remainder()} кКал')
         else:
             return 'Хватит есть!'
