@@ -67,8 +67,9 @@ class CashCalculator(Calculator):
 class CaloriesCalculator(Calculator):
 
     def get_calories_remained(self):
-        if self.remainder() > 0:
+        remainder = self.remainder()
+        if remainder > 0:
             return ('Сегодня можно съесть что-нибудь ещё, '
                     'но с общей калорийностью не более '
-                    f'{self.remainder()} кКал')
+                    f'{remainder} кКал')
         return 'Хватит есть!'
